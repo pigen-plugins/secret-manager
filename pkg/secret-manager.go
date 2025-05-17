@@ -43,7 +43,10 @@ func (s *SecretManager) Initializer(plugin shared.Plugin) (*tfengine.Terraform ,
 	fmt.Println("Parsed config:", s)
 	// Initialize Terraform
 	files := terraform.LoadTFFiles()
-	tfVars := plugin.Config
+	tfVars, err := helpers.StructToMap(s.Config)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to convert struct to map: %v", err)
+	}
 	t, err := tfengine.NewTF(tfVars, files, s.Label)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to setup Terraform executor: %v", err)
@@ -90,8 +93,9 @@ func (s *SecretManager) GetOutput(plugin shared.Plugin) shared.GetOutputResponse
 	for k, _ := range s.Config.Secrets {
 		secretsList = append(secretsList, k)
 	}
-	output := map[string]interface{}{
-		"secrets_list": secretsList,
+	output, err := helpers.StructToMap(s.Output)
+	if err != nil {
+		return shared.GetOutputResponse{Output: nil, Error: fmt.Errorf("Failed to convert struct to map: %v", err)}
 	}
 	return shared.GetOutputResponse{Output: output, Error: nil}
 }
