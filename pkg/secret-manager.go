@@ -13,21 +13,21 @@ import (
 
 
 type SecretManager struct {
-	Label string `yaml:"label"`
-	Config Config `yaml:"config"`
-	Output Output `yaml:"output"`
+	Label string `yaml:"label" json:"label"`
+	Config Config `yaml:"config" json:"config"`
+	Output Output `yaml:"output" json:"output"`
 }
 
 
 
 type Config struct {
-	ProjectId string `yaml:"project_id"`
-	Prefix		string `yaml:"prefix"`
-	Secrets map[string]string `yaml:"secrets"`
+	ProjectId string `yaml:"project_id" json:"project_id"`
+	Prefix		string `yaml:"prefix" json:"prefix"`
+	Secrets map[string]string `yaml:"secrets" json:"secrets"`
 }
 
 type Output struct {
-	SecretsList []string `yaml:"secrets_list"`
+	SecretsList []string `yaml:"secrets_list" json:"secrets_list"`
 }
 
 
@@ -47,6 +47,7 @@ func (s *SecretManager) Initializer(plugin shared.Plugin) (*tfengine.Terraform ,
 	if err != nil {
 		return nil, fmt.Errorf("Failed to convert struct to map: %v", err)
 	}
+	fmt.Println("Terraform variables:", tfVars)
 	t, err := tfengine.NewTF(tfVars, files, s.Label)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to setup Terraform executor: %v", err)
@@ -93,7 +94,7 @@ func (s *SecretManager) GetOutput(plugin shared.Plugin) shared.GetOutputResponse
 	for k, _ := range s.Config.Secrets {
 		secretsList = append(secretsList, k)
 	}
-	output, err := helpers.StructToMap(s.Output)
+	output, err := helpers.StructToMap(s.Config)
 	if err != nil {
 		return shared.GetOutputResponse{Output: nil, Error: fmt.Errorf("Failed to convert struct to map: %v", err)}
 	}
