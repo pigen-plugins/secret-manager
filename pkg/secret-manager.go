@@ -4,37 +4,34 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
-	"github.com/pigen-plugins/secret-manager/helpers"
-	"github.com/pigen-plugins/secret-manager/pkg/terraform"
 	shared "github.com/pigen-dev/shared"
 	tfengine "github.com/pigen-dev/shared/tfengine"
+	"github.com/pigen-plugins/secret-manager/helpers"
+	"github.com/pigen-plugins/secret-manager/pkg/terraform"
 )
 
-
 type SecretManager struct {
-	Label string `yaml:"label" json:"label"`
+	Label  string `yaml:"label" json:"label"`
 	Config Config `yaml:"config" json:"config"`
 	Output Output `yaml:"output" json:"output"`
 }
 
-
-
 type Config struct {
-	ProjectId string `yaml:"project_id" json:"project_id"`
-	Prefix		string `yaml:"prefix" json:"prefix"`
-	Secrets map[string]string `yaml:"secrets" json:"secrets"`
+	ProjectId string            `yaml:"project_id" json:"project_id"`
+	Prefix    string            `yaml:"prefix" json:"prefix"`
+	Secrets   map[string]string `yaml:"secrets" json:"secrets"`
 }
 
 type Output struct {
 	SecretsList []string `yaml:"secrets_list" json:"secrets_list"`
-	Prefix string `yaml:"prefix" json:"prefix"`
+	Prefix      string   `yaml:"prefix" json:"prefix"`
 }
 
-
-func (s *SecretManager) Initializer(plugin shared.Plugin) (*tfengine.Terraform ,error) {
+func (s *SecretManager) Initializer(plugin shared.Plugin) (*tfengine.Terraform, error) {
 	config := Config{}
-	err:= helpers.YamlConfigParser(plugin.Config, &config)
+	err := helpers.YamlConfigParser(plugin.Config, &config)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to parse YAML config: %v", err)
 	}
@@ -53,11 +50,9 @@ func (s *SecretManager) Initializer(plugin shared.Plugin) (*tfengine.Terraform ,
 	if err != nil {
 		return nil, fmt.Errorf("Failed to setup Terraform executor: %v", err)
 	}
-	
+
 	return t, nil
 }
-
-
 
 func (s *SecretManager) SetupPlugin(plugin shared.Plugin) error {
 	tf, err := s.Initializer(plugin)
@@ -77,7 +72,6 @@ func (s *SecretManager) SetupPlugin(plugin shared.Plugin) error {
 		return fmt.Errorf("Error during Terraform plan: %v", err)
 	}
 
-	
 	if err := tf.TerraformApply(ctx); err != nil {
 		return fmt.Errorf("Error during Terraform apply: %v", err)
 	}
@@ -85,15 +79,16 @@ func (s *SecretManager) SetupPlugin(plugin shared.Plugin) error {
 	return nil
 }
 
-
 func (s *SecretManager) GetOutput(plugin shared.Plugin) shared.GetOutputResponse {
 	_, err := s.Initializer(plugin)
 	if err != nil {
 		return shared.GetOutputResponse{Output: nil, Error: fmt.Errorf("Failed to initialize plugin: %v", err)}
 	}
 	var secretsList []string
+	prefix := fmt.Sprintf("%s_", s.Config.Prefix)
 	for k, _ := range s.Config.Secrets {
-		secretsList = append(secretsList, k)
+		secret := strings.Replace(k, prefix, "", 1)
+		secretsList = append(secretsList, secret)
 	}
 	s.Output.SecretsList = secretsList
 	s.Output.Prefix = s.Config.Prefix
@@ -103,7 +98,6 @@ func (s *SecretManager) GetOutput(plugin shared.Plugin) shared.GetOutputResponse
 	}
 	return shared.GetOutputResponse{Output: output, Error: nil}
 }
-
 
 func (s *SecretManager) Destroy(plugin shared.Plugin) error {
 	tf, err := s.Initializer(plugin)
