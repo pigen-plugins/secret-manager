@@ -28,6 +28,7 @@ type Config struct {
 
 type Output struct {
 	SecretsList []string `yaml:"secrets_list" json:"secrets_list"`
+	Prefix string `yaml:"prefix" json:"prefix"`
 }
 
 
@@ -43,7 +44,7 @@ func (s *SecretManager) Initializer(plugin shared.Plugin) (*tfengine.Terraform ,
 	fmt.Println("Parsed config:", s)
 	// Initialize Terraform
 	files := terraform.LoadTFFiles()
-	tfVars, err := helpers.StructToMap(s.Config)
+	tfVars, err := helpers.StructToJsonMap(s.Config)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to convert struct to map: %v", err)
 	}
@@ -94,7 +95,9 @@ func (s *SecretManager) GetOutput(plugin shared.Plugin) shared.GetOutputResponse
 	for k, _ := range s.Config.Secrets {
 		secretsList = append(secretsList, k)
 	}
-	output, err := helpers.StructToMap(s.Config)
+	s.Output.SecretsList = secretsList
+	s.Output.Prefix = s.Config.Prefix
+	output, err := helpers.StructToJsonMap(s.Output)
 	if err != nil {
 		return shared.GetOutputResponse{Output: nil, Error: fmt.Errorf("Failed to convert struct to map: %v", err)}
 	}
